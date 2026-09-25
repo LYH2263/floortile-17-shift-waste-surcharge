@@ -6,6 +6,7 @@ import Tiles from './pages/Tiles.vue'
 import Bench from './pages/Bench.vue'
 import WasteRules from './pages/WasteRules.vue'
 import History from './pages/History.vue'
+import RunDetail from './pages/RunDetail.vue'
 import Settings from './pages/Settings.vue'
 
 export default createRouter({
@@ -18,6 +19,7 @@ export default createRouter({
     { path: '/bench', component: Bench },
     { path: '/waste', component: WasteRules },
     { path: '/history', component: History },
+    { path: '/history/:id', component: RunDetail, props: true },
     { path: '/settings', component: Settings },
   ],
 })

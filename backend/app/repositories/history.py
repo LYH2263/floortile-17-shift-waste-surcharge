@@ -10,13 +10,21 @@ def insert_run(
     waste_pct: float,
     result: dict,
     note: str = "",
+    construction_hour: float | None = None,
+    shift_id: int | None = None,
+    shift_name: str | None = None,
+    base_waste_pct: float | None = None,
+    surcharge_pct: float = 0.0,
 ) -> int:
     conn = connect()
     try:
         cur = conn.execute(
             """
-            INSERT INTO calc_runs(room_id, tile_id, waste_pct, result_json, note, created_at)
-            VALUES (?,?,?,?,?,?)
+            INSERT INTO calc_runs(
+                room_id, tile_id, waste_pct, result_json, note, created_at,
+                construction_hour, shift_id, shift_name, base_waste_pct, surcharge_pct
+            )
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)
             """,
             (
                 room_id,
@@ -25,6 +33,11 @@ def insert_run(
                 json.dumps(result, ensure_ascii=False),
                 note,
                 datetime.now(timezone.utc).isoformat(),
+                construction_hour,
+                shift_id,
+                shift_name,
+                base_waste_pct,
+                surcharge_pct,
             ),
         )
         conn.commit()

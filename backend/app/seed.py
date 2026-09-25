@@ -30,8 +30,17 @@ def init_db():
             note TEXT DEFAULT '',
             created_at TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS shifts(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            start_hour REAL NOT NULL,
+            end_hour REAL NOT NULL,
+            surcharge_pct REAL NOT NULL,
+            enabled INTEGER NOT NULL DEFAULT 1
+        );
         """
     )
+    _migrate(conn)
     if conn.execute("SELECT COUNT(*) c FROM rooms").fetchone()["c"] == 0:
         conn.executemany(
             "INSERT INTO rooms(name,length,width,data_quality,note) VALUES (?,?,?,?,?)",
@@ -50,5 +59,25 @@ def init_db():
             ],
         )
         conn.execute("INSERT INTO settings(key,value) VALUES ('waste_pct','8')")
+        conn.execute(
+            "INSERT INTO shifts(name,start_hour,end_hour,surcharge_pct,enabled) VALUES (?,?,?,?,1)",
+            ("夜班", 22.0, 6.0, 3.0),
+        )
         conn.commit()
     conn.close()
+
+
+def _migrate(conn):
+    """Add columns/tables introduced after the initial snapshot on existing DBs."""
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(calc_runs)").fetchall()}
+    if "construction_hour" not in cols:
+        conn.execute("ALTER TABLE calc_runs ADD COLUMN construction_hour REAL")
+    if "shift_id" not in cols:
+        conn.execute("ALTER TABLE calc_runs ADD COLUMN shift_id INTEGER")
+    if "shift_name" not in cols:
+        conn.execute("ALTER TABLE calc_runs ADD COLUMN shift_name TEXT")
+    if "base_waste_pct" not in cols:
+        conn.execute("ALTER TABLE calc_runs ADD COLUMN base_waste_pct REAL")
+    if "surcharge_pct" not in cols:
+        conn.execute("ALTER TABLE calc_runs ADD COLUMN surcharge_pct REAL")
+    conn.commit()

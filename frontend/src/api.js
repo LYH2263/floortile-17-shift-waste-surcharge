@@ -1,10 +1,35 @@
-export async function getJSON(path) {
-  const r = await fetch(path)
-  if (!r.ok) throw new Error(await r.text())
+async function request(path, options) {
+  const r = await fetch(path, options)
+  if (!r.ok) {
+    let msg = await r.text()
+    try {
+      msg = JSON.parse(msg).detail || msg
+    } catch {
+      // keep raw text
+    }
+    throw new Error(msg)
+  }
+  if (r.status === 204) return null
   return r.json()
 }
-export async function postJSON(path, body) {
-  const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-  if (!r.ok) throw new Error(await r.text())
-  return r.json()
+
+export function getJSON(path) {
+  return request(path)
+}
+export function postJSON(path, body) {
+  return request(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+export function putJSON(path, body) {
+  return request(path, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+}
+export function deleteJSON(path) {
+  return request(path, { method: 'DELETE' })
 }

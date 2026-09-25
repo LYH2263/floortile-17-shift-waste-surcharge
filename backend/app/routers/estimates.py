@@ -11,13 +11,21 @@ def estimate_get(
     room_id: int = Query(...),
     tile_id: int = Query(...),
     waste_pct: float | None = None,
+    construction_hour: float | None = None,
     save: bool = False,
 ):
-    return estimate_service.run_estimate(room_id, tile_id, waste_pct, save, "")
+    return estimate_service.run_estimate(
+        room_id, tile_id, waste_pct, save, "", construction_hour
+    )
 
 
 @router.post("/estimate")
 def estimate_post(body: EstimateRequest):
     return estimate_service.run_estimate(
-        body.room_id, body.tile_id, body.waste_pct, body.save, body.note
+        body.room_id,
+        body.tile_id,
+        body.waste_pct,
+        body.save,
+        body.note,
+        body.construction_hour,
     )
