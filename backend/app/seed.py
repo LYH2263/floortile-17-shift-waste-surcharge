@@ -1,6 +1,15 @@
 from app.db import connect
 
 
+def _columns(conn, table: str) -> set[str]:
+    return {r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+
+
+def _add_column_if_missing(conn, table: str, ddl: str, name: str):
+    if name not in _columns(conn, table):
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {ddl}")
+
+
 def init_db():
     conn = connect()
     conn.executescript(
@@ -21,6 +30,14 @@ def init_db():
             data_quality TEXT NOT NULL DEFAULT 'clean'
         );
         CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS shifts(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            start_hour REAL NOT NULL,
+            end_hour REAL NOT NULL,
+            surcharge_pct REAL NOT NULL,
+            active INTEGER NOT NULL DEFAULT 1
+        );
         CREATE TABLE IF NOT EXISTS calc_runs(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             room_id INTEGER,
@@ -28,10 +45,22 @@ def init_db():
             waste_pct REAL,
             result_json TEXT NOT NULL,
             note TEXT DEFAULT '',
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            work_time REAL,
+            base_waste_pct REAL,
+            surcharge_pct REAL,
+            shift_id INTEGER,
+            shift_name TEXT
         );
         """
     )
+    # migrations for databases created before shifts existed
+    _add_column_if_missing(conn, "calc_runs", "work_time REAL", "work_time")
+    _add_column_if_missing(conn, "calc_runs", "base_waste_pct REAL", "base_waste_pct")
+    _add_column_if_missing(conn, "calc_runs", "surcharge_pct REAL", "surcharge_pct")
+    _add_column_if_missing(conn, "calc_runs", "shift_id INTEGER", "shift_id")
+    _add_column_if_missing(conn, "calc_runs", "shift_name TEXT", "shift_name")
+
     if conn.execute("SELECT COUNT(*) c FROM rooms").fetchone()["c"] == 0:
         conn.executemany(
             "INSERT INTO rooms(name,length,width,data_quality,note) VALUES (?,?,?,?,?)",
@@ -50,5 +79,9 @@ def init_db():
             ],
         )
         conn.execute("INSERT INTO settings(key,value) VALUES ('waste_pct','8')")
+        conn.execute(
+            "INSERT INTO shifts(name,start_hour,end_hour,surcharge_pct,active) VALUES (?,?,?,?,1)",
+            ("夜班", 22.0, 6.0, 5.0),
+        )
         conn.commit()
     conn.close()

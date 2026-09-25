@@ -10,13 +10,24 @@ def insert_run(
     waste_pct: float,
     result: dict,
     note: str = "",
+    work_time: float | None = None,
+    base_waste_pct: float | None = None,
+    surcharge_pct: float | None = None,
+    shift_id: int | None = None,
+    shift_name: str | None = None,
 ) -> int:
+    """Persist a run. waste_pct is the total actually-applied waste percentage;
+    base/surcharge/work_time are frozen so later rule changes never recompute runs.
+    """
     conn = connect()
     try:
         cur = conn.execute(
             """
-            INSERT INTO calc_runs(room_id, tile_id, waste_pct, result_json, note, created_at)
-            VALUES (?,?,?,?,?,?)
+            INSERT INTO calc_runs(
+                room_id, tile_id, waste_pct, result_json, note, created_at,
+                work_time, base_waste_pct, surcharge_pct, shift_id, shift_name
+            )
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)
             """,
             (
                 room_id,
@@ -25,6 +36,11 @@ def insert_run(
                 json.dumps(result, ensure_ascii=False),
                 note,
                 datetime.now(timezone.utc).isoformat(),
+                work_time,
+                base_waste_pct,
+                surcharge_pct,
+                shift_id,
+                shift_name,
             ),
         )
         conn.commit()
